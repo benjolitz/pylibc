@@ -29,9 +29,16 @@ lib = ffi.dlopen('test_mmap_sharing.so')
 def write_to(target_memory_mapping, generation):
     offset = (generation % NUM_GENERATIONS)*RECORD_LENGTH
     try:
-        while int(target_memory_mapping[offset:offset+RECORD_LENGTH][:3] or 0) != 0:
+        while int(
+                target_memory_mapping[offset:offset+RECORD_LENGTH][:3]
+                or 0) != 0:
+            # busy wait until the C thread marks the generation occupying this
+            # space as "dead"
+            # prone to locking!
             pass
     except ValueError:
+        # special case when the space is just a bunch of binary zeroes
+        # ('\x00\x00\x00')
         pass
     record = FMT.format(generation) + RECORD_FORMAT[DIGITS:]
     target_memory_mapping[offset:offset+RECORD_LENGTH] = \
